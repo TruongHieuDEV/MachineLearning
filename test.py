@@ -145,7 +145,7 @@ print("Test accuracy overall: {}".format(100 * np.sum(class_correct)/np.sum(clas
 %config InlineBackend.figure_format = 'retina'
 
 
-dataiter = iter(test_dl)
+dataiter = iter(test_data)
 images, labels = next(dataiter)
 images, labels = images.to(device), labels.to(device)
 index = 49
