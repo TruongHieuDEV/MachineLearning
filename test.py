@@ -6,7 +6,7 @@ import numpy as np
 import torch.nn.functional as F
 from torch.utils.data.sampler import SubsetRandomSampler
 data = torchvision.datasets.FashionMNIST('./', download=True)
-len(data)
+
 n_epochs = 30
 batch_size_train = 64
 batch_size_test = 1000
