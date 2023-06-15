@@ -7,10 +7,10 @@ import torch.nn.functional as F
 from torch.utils.data.sampler import SubsetRandomSampler
 data = torchvision.datasets.FashionMNIST('./', download=True)
 len(data)
-n_epochs = 20
+n_epochs = 30
 batch_size_train = 64
 batch_size_test = 1000
-learning_rate = 0.01
+learning_rate = 0.003
 momentum = 0.9
 log_interval = 10
 
@@ -46,21 +46,26 @@ class Model(nn.Module):
     self.out = nn.Linear(in_features=60, out_features=10)
     self.dropout = nn.Dropout(0.25)
   def forward(self, t):
+    
     t = self.conv1(t)
-    t = self.dropout(F.relu(t))
+    t = F.relu(t)
+    t = self.dropout(t)
     t = F.max_pool2d(t, kernel_size=2, stride=2)
     t = self.conv2(t)
-    t = self.dropout(F.relu(t))
+    t = F.relu(t)
+    t = self.dropout(t)
     t = F.max_pool2d(t, kernel_size=2, stride=2)
-    t = t.reshape(-1, 12*4*4)
+    t = t.view(-1, 12*4*4)
     t = self.fc1(t)
-    t = self.dropout(F.relu(t))
+    t = F.relu(t)
+    t = self.dropout(t)
     t = self.fc2(t)
-    t = self.dropout(F.relu(t))
+    t = F.relu(t)
+    t = self.dropout(t)
     t = F.log_softmax(self.out(t), dim=1)
     return t
 import matplotlib.pyplot as plt
-dataiter = iter(test_loader)
+dataiter = iter(test_dl)
 print(dataiter)
 images, labels = next(dataiter)
 desc = ['T-shirt/top','Trouser','Pullover','Dress','Coat','Sandal','Shirt','Sneaker','Bag','Ankle Boot']
@@ -86,15 +91,16 @@ def train(train_data, vali_data, n_epochs, optimizer, loss_fn, device):
       loss.backward()
       optimizer.step()
       running_loss += loss.item() * x.size(0)
-      
-    for x, y in vali_data:
-      x, y = x.to(device), y.to(device)
-      
-      yhat = model(x)
-      loss = loss_fn(yhat, y)
-      validation_loss += loss.item() * x.size(0)
-      total_correct += yhat.argmax(dim=1).eq(y).sum().item()
-    running_loss /= len(train_data.sampler)
+    else:
+      model.eval() 
+      for x, y in vali_data:
+        x, y = x.to(device), y.to(device)
+        
+        yhat = model(x)
+        loss = loss_fn(yhat, y)
+        validation_loss += loss.item() * x.size(0)
+        total_correct += yhat.argmax(dim=1).eq(y).sum().item()
+      running_loss /= len(train_data.sampler)
     validation_loss /= len(vali_data.sampler)
     total_correct /= len(vali_data.sampler)
     train_losses.append(running_loss)
@@ -106,8 +112,9 @@ def train(train_data, vali_data, n_epochs, optimizer, loss_fn, device):
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 model = Model().to(device)
 loss_fn = nn.NLLLoss()
-optimizer = torch.optim.Adam(model.parameters(), lr = 0.003)
+optimizer = torch.optim.Adam(model.parameters(), lr = learning_rate)
 model.train()
+
 train_losses, vali_losses = train(train_data, vali_data, n_epochs, optimizer, loss_fn, device)
 plt.plot(train_losses, label="Train loss")
 plt.plot(vali_losses, label="Vali loss")
@@ -134,3 +141,26 @@ print("Test loss: {:.6f}".format(test_loss))
 for i in range(10):
   print("Test accuracy of class {}: {}% ({}/{})".format(i,100 * class_correct[i] /class_total[i],  class_correct[i],class_total[i]))
 print("Test accuracy overall: {}".format(100 * np.sum(class_correct)/np.sum(class_total)))
+%matplotlib inline
+%config InlineBackend.figure_format = 'retina'
+
+
+dataiter = iter(test_dl)
+images, labels = next(dataiter)
+images, labels = images.to(device), labels.to(device)
+index = 49
+img, label = images[index], labels[index]
+
+proba = torch.exp(model(img))
+
+
+desc = ['T-shirt/top','Trouser','Pullover','Dress','Coat','Sandal','Shirt','Sneaker','Bag','Ankle Boot']
+fig, (ax1, ax2) =  plt.subplots(figsize=(13, 6), nrows=1, ncols=2)
+ax1.axis('off')
+ax1.imshow(images[index].cpu().numpy().squeeze())
+ax1.set_title(desc[label.item()])
+ax2.bar(range(10), proba.detach().cpu().numpy().squeeze())
+ax2.set_xticks(range(10))
+ax2.set_xticklabels(desc, size='small')
+ax2.set_title('Predicted Probabilities')
+plt.tight_layout()
