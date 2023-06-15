@@ -6,7 +6,7 @@ import numpy as np
 import torch.nn.functional as F
 from torch.utils.data.sampler import SubsetRandomSampler
 data = torchvision.datasets.FashionMNIST('./', download=True)
-n_epochs = 40
+n_epochs = 19
 batch_size_train = 64
 batch_size_test = 1000
 learning_rate = 0.01
@@ -97,7 +97,7 @@ def train(train_data, vali_data, n_epochs, optimizer, loss_fn, ):
 
 model = Model()
 loss_fn = nn.NLLLoss()
-optimizer = torch.optim.Adam(model.parameters(), lr=0.009)
+optimizer = torch.optim.Adam(model.parameters(), lr=0.002)
 model.train()
 train_losses, vali_losses = train(train_data, vali_data, n_epochs, optimizer, loss_fn)
 plt.plot(train_losses, label="Train loss")
