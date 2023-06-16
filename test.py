@@ -153,14 +153,13 @@ print("Test accuracy overall: {}".format(100 * np.sum(class_correct)/np.sum(clas
 %matplotlib inline
 %config InlineBackend.figure_format = 'retina'
 
-
 dataiter = iter(test_loader)
 images, labels = next(dataiter)
 images, labels = images.to(device), labels.to(device)
-index = 49
+index = 50
 img, label = images[index], labels[index]
 
-proba = torch.exp(model(imgaé))
+preds = model(images)
 
 
 desc = ['T-shirt/top','Trouser','Pullover','Dress','Coat','Sandal','Shirt','Sneaker','Bag','Ankle Boot']
@@ -168,7 +167,9 @@ fig, (ax1, ax2) =  plt.subplots(figsize=(13, 6), nrows=1, ncols=2)
 ax1.axis('off')
 ax1.imshow(images[index].cpu().numpy().squeeze())
 ax1.set_title(desc[label.item()])
-ax2.bar(range(10), proba.detach().cpu().numpy().squeeze())
+preds = preds.detach().numpy()[index]
+preds = np.exp(preds)
+ax2.bar(range(10), preds)
 ax2.set_xticks(range(10))
 ax2.set_xticklabels(desc, size='small')
 ax2.set_title('Predicted Probabilities')
