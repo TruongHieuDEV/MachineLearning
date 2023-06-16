@@ -7,8 +7,8 @@ import torch.nn.functional as F
 from torch.utils.data.sampler import SubsetRandomSampler
 data = torchvision.datasets.FashionMNIST('./', download=True)
 
-n_epochs = 30
-batch_size_train = 64
+n_epochs =10
+batch_size_train = 128
 batch_size_test = 1000
 learning_rate = 0.003
 momentum = 0.9
@@ -39,23 +39,27 @@ test_loader = torch.utils.data.DataLoader(testset, batch_size=batch_size_test, s
 class Model(nn.Module):
   def __init__(self):
     super().__init__()
-    self.conv1 = nn.Conv2d(in_channels=1, out_channels=6, kernel_size=5)
-    self.conv2 = nn.Conv2d(in_channels=6, out_channels=12, kernel_size=5)
-    self.fc1 = nn.Linear(in_features=12*4*4, out_features=120)
+    self.conv1 = nn.Conv2d(in_channels=1, out_channels=6, kernel_size=3, padding=1)
+    self.batch1 = nn.BatchNorm2d(6)
+    self.conv2 = nn.Conv2d(in_channels=6, out_channels=12, kernel_size=3, padding=1)
+    self.batch2 = nn.BatchNorm2d(12)
+    self.fc1 = nn.Linear(in_features=12*7*7, out_features=120)
     self.fc2 = nn.Linear(in_features=120, out_features=60)
     self.out = nn.Linear(in_features=60, out_features=10)
     self.dropout = nn.Dropout(0.25)
   def forward(self, t):
     
     t = self.conv1(t)
+    t = self.batch1(t)
     t = F.relu(t)
     t = self.dropout(t)
     t = F.max_pool2d(t, kernel_size=2, stride=2)
     t = self.conv2(t)
+    t = self.batch2(t)
     t = F.relu(t)
     t = self.dropout(t)
     t = F.max_pool2d(t, kernel_size=2, stride=2)
-    t = t.view(-1, 12*4*4)
+    t = t.view(-1, 12*7*7)
     t = self.fc1(t)
     t = F.relu(t)
     t = self.dropout(t)
@@ -65,7 +69,7 @@ class Model(nn.Module):
     t = F.log_softmax(self.out(t), dim=1)
     return t
 import matplotlib.pyplot as plt
-dataiter = iter(test_dl)
+dataiter = iter(test_loader)
 print(dataiter)
 images, labels = next(dataiter)
 desc = ['T-shirt/top','Trouser','Pullover','Dress','Coat','Sandal','Shirt','Sneaker','Bag','Ankle Boot']
@@ -74,7 +78,9 @@ for i in range(64):
   ax = fig.add_subplot(12, 15, i + 1)
   ax.imshow(np.squeeze(images[i]), cmap="gray")
 plt.show()
-
+def get_lr(optimizer):
+  for g in optimizer.param_groups:
+    return g['lr']
 def train(train_data, vali_data, n_epochs, optimizer, loss_fn, device):
 
   train_losses, vali_losses = [], []
@@ -101,18 +107,21 @@ def train(train_data, vali_data, n_epochs, optimizer, loss_fn, device):
         validation_loss += loss.item() * x.size(0)
         total_correct += yhat.argmax(dim=1).eq(y).sum().item()
       running_loss /= len(train_data.sampler)
+    if (i + 1) % 10 == 0:
+      for g in optimizer.param_groups:
+        g['lr'] *= 0.2
     validation_loss /= len(vali_data.sampler)
     total_correct /= len(vali_data.sampler)
     train_losses.append(running_loss)
     vali_losses.append(validation_loss)
-    print("Epoch: {}\tTraining loss: {:.6f}\t Validation loss: {:.6f}\t Validation acc: {:.6f}".format(i + 1, running_loss, validation_loss, total_correct))
+    print("Epoch: {}\tTraining loss: {:.6f}\t Validation loss: {:.6f}\t Validation acc: {:.6f}\t Lr: {}".format(i + 1, running_loss, validation_loss, total_correct, get_lr(optimizer)))
   return train_losses, vali_losses
 
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 model = Model().to(device)
 loss_fn = nn.NLLLoss()
-optimizer = torch.optim.Adam(model.parameters(), lr = learning_rate)
+optimizer = torch.optim.Adam(model.parameters(), lr = 0.001, weight_decay=0.04)
 model.train()
 
 train_losses, vali_losses = train(train_data, vali_data, n_epochs, optimizer, loss_fn, device)
@@ -145,13 +154,13 @@ print("Test accuracy overall: {}".format(100 * np.sum(class_correct)/np.sum(clas
 %config InlineBackend.figure_format = 'retina'
 
 
-dataiter = iter(test_data)
+dataiter = iter(test_loader)
 images, labels = next(dataiter)
 images, labels = images.to(device), labels.to(device)
 index = 49
 img, label = images[index], labels[index]
 
-proba = torch.exp(model(img))
+proba = torch.exp(model(imgaé))
 
 
 desc = ['T-shirt/top','Trouser','Pullover','Dress','Coat','Sandal','Shirt','Sneaker','Bag','Ankle Boot']
