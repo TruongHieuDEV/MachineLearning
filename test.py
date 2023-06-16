@@ -121,7 +121,7 @@ def train(train_data, vali_data, n_epochs, optimizer, loss_fn, device):
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 model = Model().to(device)
 loss_fn = nn.NLLLoss()
-optimizer = torch.optim.Adam(model.parameters(), lr = 0.001, weight_decay=0.04)
+optimizer = torch.optim.Adam(model.parameters(), lr = 0.001)
 model.train()
 
 train_losses, vali_losses = train(train_data, vali_data, n_epochs, optimizer, loss_fn, device)
